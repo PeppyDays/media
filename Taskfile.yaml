@@ -1,0 +1,13 @@
+version: "3"
+
+tasks:
+  check:
+    desc: Run linting and formatting checks
+    cmds:
+      - cargo fmt --check
+      - cargo clippy -- -D warnings
+
+  test:
+    desc: Run tests
+    cmds:
+      - cargo test
