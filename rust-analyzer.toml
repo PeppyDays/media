@@ -1,0 +1,7 @@
+[imports]
+preferPrelude = true
+prefix = "crate"
+
+[imports.granularity]
+group = "item"
+enforce = true
