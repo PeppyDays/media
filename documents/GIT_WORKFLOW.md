@@ -2,6 +2,18 @@
 
 Guidelines for managing branches, commits, and pull requests.
 
+## Branching
+
+Always create a new branch from `main` before starting work. If the current branch has already been merged, switch back to `main` and create a fresh branch.
+
+```bash
+git switch main
+git pull
+git switch -c <branch-name>
+```
+
+Branch names should be lowercase and describe the change (e.g. `add-image-upload`, `fix-presigned-url-expiry`).
+
 ## Commit Guidelines
 
 ### Size and Focus
@@ -135,10 +147,11 @@ Branches are automatically deleted when their pull request is merged. No manual 
 ## Workflow Summary
 
 ```
-1. Develop          →  Make focused changes
-2. Verify           →  Run `task check` and `task test`
-3. Commit           →  Single subject, ≤200 lines, clear message
-4. Open PR          →  ≤3 commits, summary + todo
-5. Address feedback →  Amend relevant commits, force push
-6. Merge            →  Branch auto-deleted
+1. Branch           →  Create new branch from main
+2. Develop          →  Make focused changes
+3. Verify           →  Run `task check` and `task test`
+4. Commit           →  Single subject, ≤200 lines, clear message
+5. Open PR          →  ≤3 commits, summary + todo
+6. Address feedback →  Amend relevant commits, force push
+7. Merge            →  Branch auto-deleted
 ```
