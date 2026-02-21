@@ -3,5 +3,19 @@
 version = 4
 
 [[package]]
-name = "media"
+name = "api"
 version = "0.1.0"
+dependencies = [
+ "foundation",
+]
+
+[[package]]
+name = "foundation"
+version = "0.1.0"
+
+[[package]]
+name = "processor"
+version = "0.1.0"
+dependencies = [
+ "foundation",
+]

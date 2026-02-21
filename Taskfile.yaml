@@ -5,21 +5,32 @@ tasks:
     desc: Install all tools needed to work in this repo
     cmds:
       - brew install dprint
-      - rustup component add clippy
+      - rustup component add rustfmt --toolchain nightly
   fmt:
     desc: Format code and markdown
     cmds:
-      - cargo fmt
+      - cargo +nightly fmt
       - dprint fmt
-
   check:
     desc: Run linting and formatting checks
     cmds:
-      - cargo fmt --check
+      - cargo +nightly fmt --check
       - dprint check
       - cargo clippy -- -D warnings
-
   test:
     desc: Run tests
     cmds:
       - cargo test
+  run:
+    desc: Run api and processor concurrently
+    deps:
+      - run:api
+      - run:processor
+  run:api:
+    desc: Run the API server
+    cmds:
+      - cargo run --bin api
+  run:processor:
+    desc: Run the processor
+    cmds:
+      - cargo run --bin processor
