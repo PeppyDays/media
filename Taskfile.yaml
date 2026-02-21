@@ -1,10 +1,22 @@
 version: "3"
 
 tasks:
+  install:
+    desc: Install all tools needed to work in this repo
+    cmds:
+      - brew install dprint
+      - rustup component add clippy
+  fmt:
+    desc: Format code and markdown
+    cmds:
+      - cargo fmt
+      - dprint fmt
+
   check:
     desc: Run linting and formatting checks
     cmds:
       - cargo fmt --check
+      - dprint check
       - cargo clippy -- -D warnings
 
   test:
