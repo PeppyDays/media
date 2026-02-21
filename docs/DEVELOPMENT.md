@@ -120,6 +120,10 @@ Common inline suppressions:
 - `#[allow(dead_code)]` — Only during active development, remove before merging
 - `#[allow(clippy::module_name_repetitions)]` — When the repetition aids clarity
 
+## Production code hygiene
+
+**Don't modify production code only for testing.** Production code must not contain test-only annotations, attributes, or conditional compilation flags. If a testing library requires adding attributes (for example, `#[automock]`) to production traits or structs, don't use that library. Use hand-written mocks instead.
+
 ## Design principles
 
 These principles guide how you structure types and handle errors in the codebase.

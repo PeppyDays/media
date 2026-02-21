@@ -10,6 +10,7 @@ Classicist style, not Mockist. Prefer real implementations to ensure test reliab
 
 - Use real dependencies backed by local infrastructure (PostgreSQL, S3-compatible storage, etc.)
 - Only mock external service clients (CloudFront signer, third-party APIs) that require network calls or AWS credentials
+- Don't modify production code only for testing. If a mocking library requires adding attributes (for example, `#[automock]`) to production traits, don't use it. Use hand-written mocks instead.
 
 ## Directory structure
 
@@ -307,4 +308,4 @@ struct MockStorage { ... }
 impl MediaStorage for MockStorage { ... }
 ```
 
-Use `mockall` or hand-written mocks. Prefer hand-written mocks for simple interfaces, `mockall` for complex ones.
+Use hand-written mocks. Don't use libraries that require modifying production code with test-only annotations.
