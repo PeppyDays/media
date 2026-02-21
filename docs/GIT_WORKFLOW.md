@@ -1,4 +1,4 @@
-# Git Workflow
+# Git workflow
 
 Guidelines for managing branches, commits, and pull requests.
 
@@ -12,19 +12,23 @@ git pull
 git switch -c <branch-name>
 ```
 
-Branch names should be lowercase and describe the change (e.g. `add-image-upload`, `fix-presigned-url-expiry`).
+Branch names must be lowercase and describe the change (for example, `add-image-upload`, `fix-presigned-url-expiry`).
 
-## Commit Guidelines
+## Commit guidelines
 
-### Size and Focus
+Each commit captures a single, focused change that keeps the codebase in a working state.
 
-Each commit should represent a single, focused change. This makes reviews easier and history more navigable.
+### Size and focus
+
+Each commit must represent a single, focused change. This makes reviews easier and history more navigable.
 
 - **One subject per commit**: Address only one logical change
 - **Up to 200 lines changed**: Excluding documentation and tests
-- **Self-contained**: Each commit should leave the codebase in a working state
+- **Self-contained**: Each commit must leave the codebase in a working state
 
-### Message Format
+### Message format
+
+Use the following format for commit messages:
 
 ```
 <type>: <summary>
@@ -35,7 +39,9 @@ Each commit should represent a single, focused change. This makes reviews easier
 - **type**: Category of change (see table below)
 - **summary**: Brief description in imperative mood
 
-### Commit Types
+### Commit types
+
+The following table lists the recognized commit types:
 
 | Type       | Description                                   |
 | ---------- | --------------------------------------------- |
@@ -60,7 +66,7 @@ feat: add retry logic for image downloads
 - Log retry attempts for observability
 ```
 
-### Pre-Commit Checks
+### Pre-commit checks
 
 Before committing, ensure all linting and tests pass:
 
@@ -74,7 +80,7 @@ task test
 
 Both must pass before creating a commit. Fix any issues before proceeding.
 
-### Co-Authoring
+### Co-authoring
 
 Credit collaborators or AI assistance using the `Co-Authored-By` trailer at the end of the commit message:
 
@@ -87,14 +93,18 @@ Co-Authored-By: Name <email@example.com>
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-## Pull Request Guidelines
+## Pull request guidelines
+
+These guidelines keep pull requests focused and easy to review.
 
 ### Size
+
+Keep pull requests small and focused:
 
 - **Up to 3 commits per PR**: Keeps reviews focused and manageable
 - If a feature requires more commits, consider splitting into multiple PRs
 
-### Description Format
+### Description format
 
 Follow the same format as commit messages:
 
@@ -108,7 +118,7 @@ Follow the same format as commit messages:
 <manual steps required after deployment>
 ```
 
-### Updating After Review
+### Updating after review
 
 When changes are requested after opening a PR:
 
@@ -140,11 +150,13 @@ git rebase --continue
 git push --force
 ```
 
-## Branch Lifecycle
+## Branch lifecycle
 
 Branches are automatically deleted when their pull request is merged. No manual cleanup required.
 
-## Workflow Summary
+## Workflow summary
+
+The following steps outline the complete workflow from branch creation to merge:
 
 ```
 1. Branch           →  Create new branch from main
