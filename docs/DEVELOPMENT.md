@@ -1,11 +1,45 @@
 # Development guidelines
 
-## Cargo project
+## Project structure
 
-The project uses Cargo with the Rust nightly toolchain. Common commands:
+The project is organized as a Cargo workspace with packages in `packages/`:
+
+```plaintext
+packages/
+├── api/                # HTTP server (axum routes, app setup)
+│   └── src/
+├── foundation/         # Core business logic (library crate)
+│   └── src/
+│       ├── common/     # Cross-cutting concerns (config, tracing)
+│       ├── feature/    # Vertical feature slices
+│       │   ├── upload/
+│       │   ├── serve/
+│       │   ├── transcode/
+│       │   └── manage/
+│       └── shared/     # Shared infrastructure
+│           ├── storage/
+│           ├── cdn/
+│           ├── queue/
+│           └── database/
+└── processor/          # Async worker for transcoding jobs
+    └── src/
+        └── consumers/
+```
+
+Both `api` and `processor` depend on `foundation`. Feature code and domain logic live in `foundation`; the binary crates are thin entry points.
+
+Other top-level directories:
+
+```plaintext
+docs/                   # Development docs, proposals, and templates
+```
+
+## Cargo workspace
+
+Common commands:
 
 ```bash
-# Build
+# Build all packages
 cargo build
 
 # Run linting and formatting checks
@@ -14,25 +48,31 @@ task check
 # Run tests
 task test
 
-# Run the service locally
-cargo run
+# Run api and processor concurrently
+task run
+
+# Run a single package
+task run:api
+task run:processor
 ```
 
 ### Adding dependencies
 
-Use the `cargo add` command to add crates:
+Add dependencies to the specific package's `Cargo.toml`:
 
 ```bash
-# Add a dependency
-cargo add <crate>
+# Add to a specific package
+cd packages/foundation && cargo add <crate>
 
 # Add a dev dependency
-cargo add --dev <crate>
+cd packages/api && cargo add --dev <crate>
 ```
+
+For dependencies shared across multiple packages, declare them in the root `Cargo.toml` under `[workspace.dependencies]` and reference with `.workspace = true` in each consumer.
 
 **Dependency consistency:**
 
-Prefer using the same crate for similar functionality across the codebase. Before adding a new dependency, check what existing modules use.
+Prefer using the same crate for similar functionality across the codebase. Before adding a new dependency, check what existing packages use.
 
 | Purpose             | Preferred Crate                  |
 | ------------------- | -------------------------------- |
@@ -211,8 +251,6 @@ Use noun-first, past-tense naming for events with matching handler types.
 - **Event handler**: Same name with `Handler` suffix, for example, `MediaUploadedEventHandler`
 
 ## Database migrations
-
-Location: `resources/database/migrations/`
 
 **For local development and testing only.** These aren't automatic migrations — apply manually to local databases.
 

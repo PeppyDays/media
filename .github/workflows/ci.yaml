@@ -13,6 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: rustup toolchain install nightly --component rustfmt
       - uses: go-task/setup-task@v1
+      - uses: dprint/check@v2.3
       - run: task check
       - run: task test

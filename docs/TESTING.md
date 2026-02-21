@@ -13,39 +13,48 @@ Classicist style, not Mockist. Prefer real implementations to ensure test reliab
 
 ## Directory structure
 
-Tests are organized by scope:
+Tests are organized within each package:
 
 ```plaintext
-src/
-├── feature/
-│   ├── upload/
-│   │   ├── command.rs          # includes #[cfg(test)] mod tests
-│   │   └── handler.rs
-│   └── serve/
-│       ├── query.rs            # includes #[cfg(test)] mod tests
-│       └── handler.rs
-├── domain/
-│   └── media.rs                # includes #[cfg(test)] mod tests
-└── infra/
-    └── ...
-
-tests/                           # Integration tests
-├── common/
-│   └── mod.rs                   # Shared test utilities, fixtures
-├── upload_test.rs               # Upload flow integration tests
-└── serve_test.rs                # Serve flow integration tests
+packages/
+├── api/
+│   ├── src/
+│   │   └── routes/
+│   │       └── upload.rs           # includes #[cfg(test)] mod tests
+│   └── tests/                      # API integration tests
+│       ├── common/
+│       │   └── mod.rs              # Shared test utilities, fixtures
+│       └── upload_test.rs
+├── foundation/
+│   ├── src/
+│   │   └── feature/
+│   │       ├── upload/
+│   │       │   └── command.rs      # includes #[cfg(test)] mod tests
+│   │       └── serve/
+│   │           └── query.rs        # includes #[cfg(test)] mod tests
+│   └── tests/                      # Foundation integration tests
+│       └── ...
+└── processor/
+    ├── src/
+    │   └── consumers/
+    │       └── transcode.rs        # includes #[cfg(test)] mod tests
+    └── tests/                      # Processor integration tests
+        └── ...
 ```
 
 - **Unit tests**: Inside the source file as `#[cfg(test)] mod tests { ... }`
-- **Integration tests**: In the top-level `tests/` directory, one file per feature
+- **Integration tests**: In each package's `tests/` directory, one file per feature
 
 ### Running tests
 
 Use the following commands to run tests:
 
 ```bash
-# Run all tests
+# Run all tests across the workspace
 task test
+
+# Run tests for a specific package
+cargo test -p foundation
 
 # Run a specific test
 cargo test test_name

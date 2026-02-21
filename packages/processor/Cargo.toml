@@ -1,0 +1,7 @@
+[package]
+name = "processor"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+foundation.workspace = true
