@@ -59,6 +59,7 @@ Read the materials provided in your task description:
 - The PRD for feature requirements
 - The TASKS.md for acceptance criteria
 - The list of files changed in this implementation
+- Read `docs/DEVELOPMENT.md`, `docs/TESTING.md`, and `docs/UBIQUITOUS_LANGUAGES.md` to understand project conventions, design principles, testing patterns, naming patterns, and domain terminology. Verify all reviewed code follows these rules.
 
 ### 2. Review the Code
 
