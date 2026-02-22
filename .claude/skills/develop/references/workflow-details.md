@@ -6,11 +6,14 @@ Detailed procedures, review formats, and spawn examples for the development team
 
 ### Spawning the Planner
 
+Do NOT specify file paths for the PRD or TASKS.md in the prompt. The planner follows its own naming convention. Let the planner determine the correct path.
+
 Iteration 1:
 
 ```
 Task(subagent_type: "planner", team_name: "develop", name: "planner",
-     prompt: "User request: {user's request}. Gather requirements, analyze the codebase, and produce a PRD and TASKS.md.")
+     prompt: "User request: {user's request}. Gather requirements, analyze the codebase, and produce a PRD and TASKS.md.
+              The planner determines the output file paths following its own naming convention.")
 ```
 
 Iteration 2+:

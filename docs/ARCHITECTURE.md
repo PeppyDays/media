@@ -54,10 +54,11 @@ packages/foundation/src/
 ├── common/              # Cross-cutting concerns (config, tracing)
 ├── shared/              # Shared infrastructure (storage, cdn, queue, database)
 └── feature/             # Production feature slices
-    ├── upload/          # Presigned URL generation and upload completion
-    ├── serve/           # Media access via signed URLs and cookies
-    ├── transcode/       # Async video transcoding
-    └── manage/          # Media lifecycle management
+    ├── image/           # Image media type
+    │   ├── upload/      # Presigned URL generation and upload validation
+    │   └── download/    # Image access via signed URLs
+    ├── short_video/     # Short-form video (future)
+    └── long_video/      # Long-form video (future)
 ```
 
 ### Feature slice structure
@@ -70,7 +71,7 @@ Each feature slice is organized into layers:
 - **Infrastructure**: Implementations of domain traits (for example, repositories, external service clients)
 
 ```plaintext
-packages/foundation/src/feature/{feature}/
+packages/foundation/src/feature/{media_type}/{feature}/
 ├── mod.rs              # pub mod declarations only
 ├── command.rs          # Domain layer: command DTOs and executors
 ├── query.rs            # Domain layer: query DTOs and executors
@@ -87,8 +88,10 @@ packages/api/src/
 ├── container.rs        # Dependency wiring and AppState construction
 └── routes/
     ├── mod.rs
-    ├── upload.rs       # Upload endpoints
-    ├── serve.rs        # Serve endpoints
+    ├── image/
+    │   ├── mod.rs
+    │   ├── upload.rs   # Image upload endpoints
+    │   └── download.rs # Image download endpoints
     └── health.rs       # Health check endpoints
 ```
 
