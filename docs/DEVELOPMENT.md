@@ -12,18 +12,9 @@ packages/
 │   └── src/
 │       ├── common/     # Cross-cutting concerns (config, tracing)
 │       ├── feature/    # Vertical feature slices
-│       │   ├── upload/
-│       │   ├── serve/
-│       │   ├── transcode/
-│       │   └── manage/
 │       └── shared/     # Shared infrastructure
-│           ├── storage/
-│           ├── cdn/
-│           ├── queue/
-│           └── database/
 └── processor/          # Async worker for transcoding jobs
     └── src/
-        └── consumers/
 ```
 
 Both `api` and `processor` depend on `foundation`. Feature code and domain logic live in `foundation`; the binary crates are thin entry points.
@@ -253,6 +244,33 @@ Use noun-first, past-tense naming for events with matching handler types.
 
 - **Event DTO**: Start with a noun, use past-tense verb, end with `Event`, for example, `MediaUploadedEvent`, `TranscodeCompletedEvent`
 - **Event handler**: Same name with `Handler` suffix, for example, `MediaUploadedEventHandler`
+
+### API path conventions
+
+Each media type owns its own API surface under a dedicated path prefix. The path structure separates the media type, version, and resource:
+
+```
+/api/{media-type}/v1/{resource}/{action}
+```
+
+- `{media-type}`: Singular form of the media type (for example, `image`, `short-video`, `long-video`).
+- `v1`: API version, scoped per media type. Each media type can version independently.
+- `{resource}`: The domain resource or capability (for example, `upload`, `download`, `images`).
+- `{action}`: The specific operation (for example, `create-presigned-url`, `get-signed-url`).
+
+For example:
+
+```
+POST /api/image/v1/upload/create-presigned-url
+GET  /api/image/v1/download/get-signed-url/{image_id}
+POST /api/image/v1/download/get-signed-urls
+```
+
+Infrastructure endpoints like health checks live at the root level without versioning:
+
+```
+GET /api/health/liveness
+```
 
 ## Database migrations
 
