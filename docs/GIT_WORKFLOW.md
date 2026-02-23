@@ -38,6 +38,7 @@ Use the following format for commit messages:
 
 - **type**: Category of change (see table below)
 - **summary**: Brief description in imperative mood
+- **body lines**: Must not exceed 100 characters (enforced by commitlint)
 
 ### Commit types
 

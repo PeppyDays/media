@@ -18,14 +18,14 @@ When asked to develop a feature or fix, **always create a new branch first** bef
 ### Starting a new feature
 
 1. **Create a branch first** - `{feature-description}` (lowercase, hyphen-separated)
-2. Read [ubiquitous languages](.docs/UBIQUITOUS_LANGUAGES.md) - Understand domain terms
-3. Read [architecture](.docs/ARCHITECTURE.md) - Know where code belongs
-4. Read [development](.docs/DEVELOPMENT.md) - Follow naming conventions
+2. Read [ubiquitous languages](docs/UBIQUITOUS_LANGUAGES.md) - Understand domain terms
+3. Read [architecture](docs/ARCHITECTURE.md) - Know where code belongs
+4. Read [development](docs/DEVELOPMENT.md) - Follow naming conventions
 
 ### Writing tests
 
-1. Read [testing](.docs/TESTING.md) - Testing philosophy & patterns
-2. Read [architecture](.docs/ARCHITECTURE.md) - Layer-specific testing strategies
+1. Read [testing](docs/TESTING.md) - Testing philosophy & patterns
+2. Read [architecture](docs/ARCHITECTURE.md) - Layer-specific testing strategies
 
 ### Committing and pull requests
 
@@ -33,9 +33,12 @@ When asked to develop a feature or fix, **always create a new branch first** bef
 2. Branch: `{feature-description}` in lowercase
 3. Commits: Single subject, up to 200 lines (excluding docs/tests)
 4. PRs: Up to 3 commits, amend and force push for post-review changes
+5. Commitlint: body lines must not exceed 100 characters
 
 ## Key principles
 
+- **No speculative code**: Only derive traits or add abstractions when currently needed
+- **Dependency freshness**: Check last commit on GitHub before adding a crate. Reject unmaintained crates (>1 year inactive).
 - **Workspace architecture**: Code organized into separate packages (`api`, `foundation`, `processor`)
 - **Vertical slice architecture**: Features are self-contained within `foundation`
 - **Classicist testing**: Use real implementations, mock only external services
