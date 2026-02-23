@@ -12,7 +12,8 @@ packages/
 │   └── src/
 ├── foundation/         # Core business logic (library crate)
 │   └── src/
-│       ├── common/     # Cross-cutting concerns (config, tracing)
+│       ├── common/     # Cross-cutting concerns (tracing)
+│       ├── config.rs   # Configuration (env-based, per-package)
 │       ├── feature/    # Vertical feature slices
 │       └── shared/     # Shared infrastructure
 └── processor/          # Async worker for transcoding jobs
@@ -51,7 +52,8 @@ Within the `foundation` package, the system is organized around business capabil
 
 ```plaintext
 packages/foundation/src/
-├── common/              # Cross-cutting concerns (config, tracing)
+├── common/              # Cross-cutting concerns (tracing)
+├── config.rs            # Configuration (env-based, per-package)
 ├── shared/              # Shared infrastructure (storage, cdn, queue, database)
 └── feature/             # Production feature slices
     ├── image/           # Image media type
@@ -198,7 +200,7 @@ pub struct AppState {
 
 impl AppState {
     pub async fn build(config: &Config) -> Self {
-        let pool = PgPool::connect(&config.database_url).await.unwrap();
+        let pool = PgPool::connect(&config.database.connection_url()).await.unwrap();
 
         // Wire infrastructure
         let media_repository = Arc::new(PostgresMediaRepository::new(pool.clone()));

@@ -10,7 +10,8 @@ packages/
 │   └── src/
 ├── foundation/         # Core business logic (library crate)
 │   └── src/
-│       ├── common/     # Cross-cutting concerns (config, tracing)
+│       ├── common/     # Cross-cutting concerns (tracing)
+│       ├── config.rs   # Configuration (env-based, per-package)
 │       ├── feature/    # Vertical feature slices
 │       └── shared/     # Shared infrastructure
 └── processor/          # Async worker for transcoding jobs
