@@ -4,10 +4,8 @@ use std::str::FromStr;
 use async_trait::async_trait;
 use chrono::DateTime;
 use chrono::Utc;
-use serde::Deserialize;
-use serde::Serialize;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct ImageId(pub String);
 
 impl fmt::Display for ImageId {
@@ -16,7 +14,7 @@ impl fmt::Display for ImageId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum ImageStatus {
     Pending,
     Ready,
@@ -46,7 +44,7 @@ impl FromStr for ImageStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Image {
     pub id: ImageId,
     pub status: ImageStatus,

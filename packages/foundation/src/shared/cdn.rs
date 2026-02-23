@@ -6,7 +6,6 @@ use cloudfront_sign::EncodingError;
 use cloudfront_sign::SignedOptions;
 use cloudfront_sign::get_signed_url;
 
-#[derive(Clone)]
 pub struct CloudFrontSigner {
     domain: String,
     key_pair_id: String,
