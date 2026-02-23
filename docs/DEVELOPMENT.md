@@ -93,6 +93,15 @@ Prefer using the same crate for similar functionality across the codebase. Befor
 | Error handling      | `thiserror` and `anyhow`         |
 | HTTP client         | `reqwest`                        |
 | Observability       | `tracing` + `tracing-subscriber` |
+| Configuration       | `envconfig`                      |
+
+**Dependency health:**
+
+Before adding a new crate, verify it is actively maintained. Check the repository's commit history and open issues on crates.io or GitHub. Avoid crates whose last release is more than a year old unless the crate is widely considered stable and complete (for example, a small, focused utility with no known bugs). Prefer crates that are either maintained by established teams or widely adopted in the Rust ecosystem.
+
+**Dependency version:**
+
+Always check the latest version and prefer the most recent stable release.
 
 ## Documentation
 
