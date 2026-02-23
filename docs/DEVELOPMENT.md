@@ -49,17 +49,35 @@ task run:processor
 
 ### Adding dependencies
 
-Add dependencies to the specific package's `Cargo.toml`:
+Dependencies are split between the workspace root and individual packages based on scope.
 
-```bash
-# Add to a specific package
-cd packages/foundation && cargo add <crate>
+**Workspace-level dependencies** (root `Cargo.toml` under `[workspace.dependencies]`):
 
-# Add a dev dependency
-cd packages/api && cargo add --dev <crate>
+Only declare dependencies here when they are shared across two or more packages. Each package references them with `.workspace = true`. This centralizes version management for common crates and ensures consistency across the workspace.
+
+```toml
+# Root Cargo.toml
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
 ```
 
-For dependencies shared across multiple packages, declare them in the root `Cargo.toml` under `[workspace.dependencies]` and reference with `.workspace = true` in each consumer.
+```toml
+# packages/api/Cargo.toml
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+```
+
+**Package-level dependencies** (each package's `Cargo.toml`):
+
+Dependencies used by only one package are declared directly in that package's `Cargo.toml` with an explicit version. This keeps the workspace root lean and makes each package's unique requirements visible at a glance.
+
+```toml
+# packages/api/Cargo.toml — axum is only used by the api package
+[dependencies]
+axum = "0.8"
+```
 
 **Dependency consistency:**
 
