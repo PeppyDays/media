@@ -104,19 +104,44 @@ Keep pull requests small and focused:
 - **Up to 3 commits per PR**: Keeps reviews focused and manageable
 - If a feature requires more commits, consider splitting into multiple PRs
 
+### Title format
+
+PR titles follow the same convention as commit messages:
+
+```
+<type>: <summary>
+```
+
+- **type**: Same types as commits (`feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `perf`, `style`)
+- **summary**: Imperative mood, lowercase, no trailing period
+
+When a PR contains multiple commit types, use the type that best represents the overall change. If a PR includes both a feature and its documentation, use `feat`.
+
+**Examples:**
+
+```
+feat: add presigned URL generation for image uploads
+fix: handle expired tokens in upload validation
+docs: add testing guidelines and conventions
+chore: add CI pipeline and tooling config
+refactor: extract shared storage client into foundation
+```
+
 ### Description format
 
-Follow the same format as commit messages:
+The PR description summarizes the changes for reviewers:
 
 ```markdown
 ## Summary
 
-<bullet points summarizing all changes in the PR>
+- <bullet points summarizing all changes in the PR>
 
 ## Todo (optional)
 
-<manual steps required after deployment>
+- <manual steps required after deployment>
 ```
+
+Focus on what changed and why. The diff shows the how.
 
 ### Updating after review
 
