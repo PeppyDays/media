@@ -1,16 +1,27 @@
 use std::fmt;
-use std::str::FromStr;
 
 use async_trait::async_trait;
 use chrono::DateTime;
 use chrono::Utc;
 
 #[derive(Debug)]
-pub struct ImageId(pub String);
+pub struct ImageId(String);
+
+impl ImageId {
+    pub fn new(id: String) -> Self {
+        Self(id)
+    }
+}
 
 impl fmt::Display for ImageId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for ImageId {
+    fn as_ref(&self) -> &str {
+        self.0.as_str()
     }
 }
 
@@ -21,8 +32,8 @@ pub enum ImageStatus {
     Failed,
 }
 
-impl ImageStatus {
-    pub fn as_str(&self) -> &'static str {
+impl AsRef<str> for ImageStatus {
+    fn as_ref(&self) -> &str {
         match self {
             Self::Pending => "pending",
             Self::Ready => "ready",
@@ -31,10 +42,10 @@ impl ImageStatus {
     }
 }
 
-impl FromStr for ImageStatus {
-    type Err = String;
+impl TryFrom<&str> for ImageStatus {
+    type Error = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
             "pending" => Ok(Self::Pending),
             "ready" => Ok(Self::Ready),

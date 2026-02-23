@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use async_trait::async_trait;
 use chrono::DateTime;
 use chrono::Utc;
@@ -37,8 +35,8 @@ struct ImageRow {
 impl ImageRow {
     fn into_domain(self) -> Image {
         Image {
-            id: ImageId(self.id),
-            status: ImageStatus::from_str(&self.status)
+            id: ImageId::new(self.id),
+            status: ImageStatus::try_from(self.status.as_str())
                 .unwrap_or_else(|_| panic!("unknown image status in database: {}", self.status)),
             content_type: self.content_type,
             file_name: self.file_name,
@@ -57,8 +55,8 @@ impl ImageRepository for PostgresImageRepository {
             "INSERT INTO images (id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
         )
-        .bind(&image.id.0)
-        .bind(image.status.as_str())
+        .bind(image.id.as_ref())
+        .bind(image.status.as_ref())
         .bind(&image.content_type)
         .bind(&image.file_name)
         .bind(image.size_bytes)
@@ -75,7 +73,7 @@ impl ImageRepository for PostgresImageRepository {
             "SELECT id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at
              FROM images WHERE id = $1",
         )
-        .bind(&id.0)
+        .bind(id.as_ref())
         .fetch_optional(&self.pool)
         .await?;
 
@@ -83,7 +81,7 @@ impl ImageRepository for PostgresImageRepository {
     }
 
     async fn find_by_ids(&self, ids: &[ImageId]) -> Result<Vec<Image>, RepositoryError> {
-        let id_strings: Vec<&str> = ids.iter().map(|id| id.0.as_str()).collect();
+        let id_strings: Vec<&str> = ids.iter().map(|id| id.as_ref()).collect();
         let rows: Vec<ImageRow> = sqlx::query_as(
             "SELECT id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at
              FROM images WHERE id = ANY($1)",
@@ -105,9 +103,9 @@ impl ImageRepository for PostgresImageRepository {
             "UPDATE images SET status = $1, size_bytes = COALESCE($2, size_bytes), updated_at = now()
              WHERE id = $3",
         )
-        .bind(status.as_str())
+        .bind(status.as_ref())
         .bind(size_bytes)
-        .bind(&id.0)
+        .bind(id.as_ref())
         .execute(&self.pool)
         .await?;
         Ok(())
