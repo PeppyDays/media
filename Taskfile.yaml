@@ -34,3 +34,11 @@ tasks:
     desc: Run the processor
     cmds:
       - cargo run --bin processor
+  container:up:
+    desc: Start the containerized environment
+    cmds:
+      - docker compose up -d
+  container:down:
+    desc: Stop the containerized environment
+    cmds:
+      - docker compose down --volumes

@@ -5,11 +5,10 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: media
-      POSTGRES_PASSWORD: media
+      POSTGRES_PASSWORD: welcome
       POSTGRES_DB: media
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
+      - ./resources/database/migrations:/docker-entrypoint-initdb.d
 
 volumes:
   postgres_data:
