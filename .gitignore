@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/node,macos,rust,rust-analyzer,python,vim
 # Edit at https://www.toptal.com/developers/gitignore?templates=node,macos,rust,rust-analyzer,python,vim
 
+### AI Tools ###
+.serena
+
 ### macOS ###
 # General
 .DS_Store
