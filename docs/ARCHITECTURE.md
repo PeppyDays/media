@@ -127,6 +127,23 @@ Implementations of domain traits (for example, repositories, external service cl
 
 When the same pattern or utility appears across multiple features, extract it into `common/` or `shared/`.
 
+##### Boundary contract models
+
+Each infrastructure boundary defines its own contract model — a struct shaped for that boundary's concerns. Domain entities never derive boundary-specific traits (for example, `FromRow`, `Deserialize` for HTTP). Instead, each boundary converts between its contract model and the domain model using standard traits.
+
+| Boundary            | Contract model         | Example                  |
+| ------------------- | ---------------------- | ------------------------ |
+| Database repository | Data model             | `ImageDataModel`         |
+| HTTP handler        | Request / Response DTO | `CreateUploadUrlRequest` |
+| External API client | API response model     | `CloudFrontSignResponse` |
+
+Use standard conversion traits for the mapping:
+
+- **Inbound** (contract model → domain): `TryFrom<ContractModel> for DomainEntity` when parsing can fail (for example, mapping strings to enums), `From` when infallible
+- **Outbound** (domain → contract model): `From<DomainEntity> for ContractModel` when infallible, `TryFrom` when the conversion can fail
+
+This keeps domain models free of infrastructure annotations and makes each boundary independently testable.
+
 ### Dependency rules
 
 - **Inward dependencies**: Features depend on `common/` and `shared/` within foundation

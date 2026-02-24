@@ -190,6 +190,24 @@ fn get_media(id: MediaId) -> Result<Media, Error> { ... }
 fn get_media(id: i64) -> Result<Media, Error> { ... }
 ```
 
+Implement standard conversion traits on newtypes for interoperability:
+
+- `AsRef<str>` (or `AsRef<inner>`) — borrow the inner value without consuming the newtype
+- `From<NewType> for InnerType` — consume the newtype to extract the inner value (prefer over custom `into_inner` methods)
+- `Display` — human-readable formatting
+
+```rust
+struct MediaId(String);
+
+impl AsRef<str> for MediaId {
+    fn as_ref(&self) -> &str { self.0.as_str() }
+}
+
+impl From<MediaId> for String {
+    fn from(id: MediaId) -> Self { id.0 }
+}
+```
+
 ### Error handling
 
 **Use typed errors, not string errors.** Define domain-specific error types with `thiserror`.
@@ -210,6 +228,42 @@ enum UploadError {
 
 // Bad: string errors
 fn upload(file: File) -> Result<(), String> { ... }
+```
+
+### Domain enums stored as text
+
+When an enum maps to a text representation at a boundary (database column, JSON field, etc.), implement these two traits:
+
+- `AsRef<str>` — convert enum to its text representation (outbound)
+- `TryFrom<&str>` with `Error = String` — parse text back to enum (inbound)
+
+```rust
+#[derive(Debug)]
+pub enum ImageContentType {
+    Jpeg,
+    Png,
+}
+
+impl AsRef<str> for ImageContentType {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Jpeg => "image/jpeg",
+            Self::Png => "image/png",
+        }
+    }
+}
+
+impl TryFrom<&str> for ImageContentType {
+    type Error = String;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s {
+            "image/jpeg" => Ok(Self::Jpeg),
+            "image/png" => Ok(Self::Png),
+            _ => Err(format!("unknown image content type: {s}")),
+        }
+    }
+}
 ```
 
 ### Avoid sentinel values
