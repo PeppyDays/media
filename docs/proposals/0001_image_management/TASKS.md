@@ -123,7 +123,7 @@ The task is complete when the following criteria are met.
 - The `update_status` method can optionally update `size_bytes`.
 - `PostgresImageRepository` correctly inserts, retrieves, batch-retrieves, and updates image records.
 - Status enum maps correctly to and from database text values.
-- All features (upload, serve, validation) can import these types from `shared::image`.
+- All features (upload, serve, validation) can import these types from `shared::record::image_record`.
 
 ## Phase 2: Upload feature
 
@@ -137,13 +137,13 @@ Create the image upload feature slice structure under `packages/foundation/src/f
 - Create `packages/foundation/src/feature/image/upload/model.rs` with:
   - `ImageStorage` trait with methods: `generate_presigned_upload_url` (signs content type into the presigned URL so S3 rejects mismatched `Content-Type` headers), `get_object_metadata` (returns object size for validation), and `delete_object` (removes S3 objects on validation failure).
 - Create `packages/foundation/src/feature/image/upload/error.rs` with `UploadError` enum.
-- Import shared types (`ImageRecord`, `ImageId`, `ImageStatus`, `ImageRepository`) from `shared::image`.
+- Import shared types (`ImageRecord`, `ImageId`, `ImageStatus`, `ImageRepository`) from `shared::record::image_record`.
 - Export from `packages/foundation/src/feature/image/mod.rs`.
 
 The task is complete when the following criteria are met.
 
 - `ImageStorage` trait defines the infrastructure boundary for presigned URL generation, object metadata retrieval, and object deletion.
-- Shared types are imported from `shared::image`, not redefined.
+- Shared types are imported from `shared::record::image_record`, not redefined.
 - Error types use `thiserror` for ergonomic error handling.
 
 ### Task 2.2: Implement the `CreateImageUploadUrl` command and executor
@@ -223,13 +223,13 @@ Create the serve feature slice under `packages/foundation/src/feature/image/down
   - `ImageAccess` struct with fields: image_id, download_url, expires_at.
   - `ImageCdn` trait with a `generate_signed_url` method that takes an object key and returns a signed URL.
 - Create `packages/foundation/src/feature/image/download/error.rs` with `ServeError` enum (NotFound, CdnSigningFailed, etc.).
-- Import `ImageRepository` and shared types from `shared::image`.
+- Import `ImageRepository` and shared types from `shared::record::image_record`.
 - Export from `packages/foundation/src/feature/image/mod.rs`.
 
 The task is complete when the following criteria are met.
 
 - Domain types and traits are defined.
-- Shared types are imported from `shared::image`, not redefined.
+- Shared types are imported from `shared::record::image_record`, not redefined.
 - Error types cover not-found and CDN signing failure cases.
 
 ### Task 3.2: Implement `GetImage` query and executor
