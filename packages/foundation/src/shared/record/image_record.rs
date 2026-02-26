@@ -5,7 +5,7 @@ use chrono::DateTime;
 use chrono::Utc;
 
 #[derive(Debug)]
-pub struct Image {
+pub struct ImageRecord {
     pub id: ImageId,
     pub status: ImageStatus,
     pub content_type: ImageContentType,
@@ -116,13 +116,13 @@ pub enum RepositoryError {
 }
 
 #[async_trait]
-pub trait ImageRepository: Send + Sync {
-    async fn save(&self, image: Image) -> Result<(), RepositoryError>;
-    async fn find_by_id(&self, id: &ImageId) -> Result<Option<Image>, RepositoryError>;
-    async fn find_by_ids(&self, ids: &[ImageId]) -> Result<Vec<Image>, RepositoryError>;
+pub trait ImageRecordRepository: Send + Sync {
+    async fn save(&self, image: ImageRecord) -> Result<(), RepositoryError>;
+    async fn find_by_id(&self, id: &ImageId) -> Result<Option<ImageRecord>, RepositoryError>;
+    async fn find_by_ids(&self, ids: &[ImageId]) -> Result<Vec<ImageRecord>, RepositoryError>;
     async fn update(
         &self,
         id: &ImageId,
-        modifier: impl FnOnce(Image) -> Image + Send,
+        modifier: impl FnOnce(ImageRecord) -> ImageRecord + Send,
     ) -> Result<(), RepositoryError>;
 }

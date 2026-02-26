@@ -5,25 +5,25 @@ use sqlx::FromRow;
 use sqlx::Pool;
 use sqlx::Postgres;
 
-use super::model::Image;
-use super::model::ImageContentType;
-use super::model::ImageId;
-use super::model::ImageRepository;
-use super::model::ImageStatus;
-use super::model::RepositoryError;
+use super::image_record::ImageContentType;
+use super::image_record::ImageId;
+use super::image_record::ImageRecord;
+use super::image_record::ImageRecordRepository;
+use super::image_record::ImageStatus;
+use super::image_record::RepositoryError;
 
-pub struct PostgresImageRepository {
+pub struct PostgresImageRecordRepository {
     pool: Pool<Postgres>,
 }
 
-impl PostgresImageRepository {
+impl PostgresImageRecordRepository {
     pub fn new(pool: Pool<Postgres>) -> Self {
         Self { pool }
     }
 }
 
 #[derive(FromRow)]
-struct ImageDataModel {
+struct ImageRecordDataModel {
     id: String,
     status: String,
     content_type: String,
@@ -34,8 +34,8 @@ struct ImageDataModel {
     updated_at: DateTime<Utc>,
 }
 
-impl From<Image> for ImageDataModel {
-    fn from(value: Image) -> Self {
+impl From<ImageRecord> for ImageRecordDataModel {
+    fn from(value: ImageRecord) -> Self {
         Self {
             id: value.id.into(),
             status: value.status.as_ref().to_string(),
@@ -49,10 +49,10 @@ impl From<Image> for ImageDataModel {
     }
 }
 
-impl TryFrom<ImageDataModel> for Image {
+impl TryFrom<ImageRecordDataModel> for ImageRecord {
     type Error = RepositoryError;
 
-    fn try_from(value: ImageDataModel) -> Result<Self, Self::Error> {
+    fn try_from(value: ImageRecordDataModel) -> Result<Self, Self::Error> {
         Ok(Self {
             id: ImageId::new(value.id),
             status: ImageStatus::try_from(value.status.as_str())
@@ -69,11 +69,11 @@ impl TryFrom<ImageDataModel> for Image {
 }
 
 #[async_trait]
-impl ImageRepository for PostgresImageRepository {
-    async fn save(&self, image: Image) -> Result<(), RepositoryError> {
-        let data_model = ImageDataModel::from(image);
+impl ImageRecordRepository for PostgresImageRecordRepository {
+    async fn save(&self, image: ImageRecord) -> Result<(), RepositoryError> {
+        let data_model = ImageRecordDataModel::from(image);
         sqlx::query(
-            "INSERT INTO images (id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at)
+            "INSERT INTO image_records (id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              ON CONFLICT (id) DO UPDATE SET
                  status = EXCLUDED.status,
@@ -97,35 +97,35 @@ impl ImageRepository for PostgresImageRepository {
         Ok(())
     }
 
-    async fn find_by_id(&self, id: &ImageId) -> Result<Option<Image>, RepositoryError> {
-        let data_model: Option<ImageDataModel> = sqlx::query_as(
+    async fn find_by_id(&self, id: &ImageId) -> Result<Option<ImageRecord>, RepositoryError> {
+        let data_model: Option<ImageRecordDataModel> = sqlx::query_as(
             "SELECT id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at
-             FROM images WHERE id = $1",
+             FROM image_records WHERE id = $1",
         )
         .bind(id.as_ref())
         .fetch_optional(&self.pool)
         .await?;
 
-        data_model.map(Image::try_from).transpose()
+        data_model.map(ImageRecord::try_from).transpose()
     }
 
-    async fn find_by_ids(&self, ids: &[ImageId]) -> Result<Vec<Image>, RepositoryError> {
+    async fn find_by_ids(&self, ids: &[ImageId]) -> Result<Vec<ImageRecord>, RepositoryError> {
         let id_strings: Vec<&str> = ids.iter().map(|id| id.as_ref()).collect();
-        let data_models: Vec<ImageDataModel> = sqlx::query_as(
+        let data_models: Vec<ImageRecordDataModel> = sqlx::query_as(
             "SELECT id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at
-             FROM images WHERE id = ANY($1)",
+             FROM image_records WHERE id = ANY($1)",
         )
         .bind(&id_strings)
         .fetch_all(&self.pool)
         .await?;
 
-        data_models.into_iter().map(Image::try_from).collect()
+        data_models.into_iter().map(ImageRecord::try_from).collect()
     }
 
     async fn update(
         &self,
         id: &ImageId,
-        modifier: impl FnOnce(Image) -> Image + Send,
+        modifier: impl FnOnce(ImageRecord) -> ImageRecord + Send,
     ) -> Result<(), RepositoryError> {
         let Some(image) = self.find_by_id(id).await? else {
             return Ok(());
