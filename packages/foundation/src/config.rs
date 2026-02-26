@@ -39,10 +39,16 @@ pub struct DatabaseConfig {
     pub password: String,
     #[envconfig(from = "FOUNDATION_DATABASE_NAME")]
     pub name: String,
+    #[envconfig(from = "FOUNDATION_DATABASE_MAX_CONNECTIONS", default = "10")]
+    pub max_connections: u32,
+    #[envconfig(from = "FOUNDATION_DATABASE_CONNECTION_TIMEOUT_SECS", default = "5")]
+    pub connection_timeout_secs: u64,
+    #[envconfig(from = "FOUNDATION_DATABASE_IDLE_TIMEOUT_SECS", default = "300")]
+    pub idle_timeout_secs: u64,
 }
 
 impl DatabaseConfig {
-    pub fn connection_url(&self) -> String {
+    pub fn dsn(&self) -> String {
         format!(
             "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.name
