@@ -120,10 +120,9 @@ pub trait ImageRepository: Send + Sync {
     async fn save(&self, image: Image) -> Result<(), RepositoryError>;
     async fn find_by_id(&self, id: &ImageId) -> Result<Option<Image>, RepositoryError>;
     async fn find_by_ids(&self, ids: &[ImageId]) -> Result<Vec<Image>, RepositoryError>;
-    async fn update_status(
+    async fn update(
         &self,
         id: &ImageId,
-        status: &ImageStatus,
-        size_bytes: Option<i64>,
+        modifier: impl FnOnce(Image) -> Image + Send,
     ) -> Result<(), RepositoryError>;
 }

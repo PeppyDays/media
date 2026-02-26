@@ -74,7 +74,14 @@ impl ImageRepository for PostgresImageRepository {
         let data_model = ImageDataModel::from(image);
         sqlx::query(
             "INSERT INTO images (id, status, content_type, file_name, size_bytes, object_key, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (id) DO UPDATE SET
+                 status = EXCLUDED.status,
+                 content_type = EXCLUDED.content_type,
+                 file_name = EXCLUDED.file_name,
+                 size_bytes = EXCLUDED.size_bytes,
+                 object_key = EXCLUDED.object_key,
+                 updated_at = EXCLUDED.updated_at",
         )
         .bind(&data_model.id)
         .bind(&data_model.status)
@@ -115,21 +122,15 @@ impl ImageRepository for PostgresImageRepository {
         data_models.into_iter().map(Image::try_from).collect()
     }
 
-    async fn update_status(
+    async fn update(
         &self,
         id: &ImageId,
-        status: &ImageStatus,
-        size_bytes: Option<i64>,
+        modifier: impl FnOnce(Image) -> Image + Send,
     ) -> Result<(), RepositoryError> {
-        sqlx::query(
-            "UPDATE images SET status = $1, size_bytes = COALESCE($2, size_bytes), updated_at = now()
-             WHERE id = $3",
-        )
-        .bind(status.as_ref())
-        .bind(size_bytes)
-        .bind(id.as_ref())
-        .execute(&self.pool)
-        .await?;
-        Ok(())
+        let Some(image) = self.find_by_id(id).await? else {
+            return Ok(());
+        };
+
+        self.save(modifier(image)).await
     }
 }
