@@ -266,6 +266,33 @@ impl TryFrom<&str> for ImageContentType {
 }
 ```
 
+### Repository update with a modifier closure
+
+When a repository needs an update operation, use a modifier closure instead of separate methods per field. This avoids method explosion (`update_status`, `update_size_bytes`, and so on) and exposure of domain logic to repository. Also this lets the caller decide what changes without the repository needing to know.
+
+```rust
+// Good: one method handles any combination of field changes
+async fn update(
+    &self,
+    id: &ImageId,
+    modifier: impl FnOnce(ImageRecord) -> ImageRecord + Send,
+) -> Result<(), RepositoryError>;
+
+// Usage
+repository.update(&id, |mut record| {
+    record.status = ImageStatus::Ready;
+    record.size_bytes = Some(bytes);
+    record
+}).await?;
+
+// Bad: a new method for every field combination
+async fn update_status(&self, id: &ImageId, status: &ImageStatus) -> Result<(), RepositoryError>;
+async fn update_size_bytes(&self, id: &ImageId, size_bytes: i64) -> Result<(), RepositoryError>;
+async fn update_status_and_size_bytes(...) -> Result<(), RepositoryError>;
+```
+
+Use `FnOnce` when the modifier runs exactly once. Use `Fn` when the modifier runs multiple times. Add `+ Send` when the repository trait requires `Send` futures (which is the case when using `#[async_trait]`).
+
 ### Avoid sentinel values
 
 Don't make a field `Option` solely to represent a different state. Handle distinct states explicitly with enums.
