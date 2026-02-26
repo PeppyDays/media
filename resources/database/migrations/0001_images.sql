@@ -1,4 +1,4 @@
-CREATE TABLE images (
+CREATE TABLE image_records (
     id           TEXT        PRIMARY KEY,
     status       TEXT        NOT NULL,
     content_type TEXT        NOT NULL,

@@ -65,9 +65,9 @@ The task is complete when the following criteria are met.
 
 ### Task 1.5: Create the images database migration
 
-Create `migrations/0001_images.sql` with the images table schema as defined in the PRD.
+Create `migrations/0001_images.sql` with the image_records table schema as defined in the PRD.
 
-- Create the `images` table with columns: id (TEXT PK), status, content_type, file_name, size_bytes (BIGINT, nullable), object_key, created_at, updated_at.
+- Create the `image_records` table with columns: id (TEXT PK), status, content_type, file_name, size_bytes (BIGINT, nullable), object_key, created_at, updated_at.
 - The `size_bytes` column is nullable (BIGINT without NOT NULL) because the actual file size is unknown at upload time and is populated during post-upload validation.
 - There is no `type` column. The table itself represents the image type. Short-form and long-form video will get their own tables (`short_videos`, `long_videos`) when implemented.
 - Document that this migration is applied manually for local development.
@@ -103,11 +103,11 @@ Create `packages/foundation/src/shared/image/` with image domain types and the r
 - Create `packages/foundation/src/shared/image/mod.rs` with module declarations.
 - Create `packages/foundation/src/shared/image/model.rs` with:
   - `ImageId` newtype wrapping a String (ULID).
-  - `Image` struct with all fields from the database schema. The `size_bytes` field is `Option<i64>` because it is nullable (unknown at upload time, populated during validation).
+  - `ImageRecord` struct with all fields from the database schema. The `size_bytes` field is `Option<i64>` because it is nullable (unknown at upload time, populated during validation).
   - `ImageStatus` enum with variants: Pending, Ready, Failed.
   - `ImageRepository` trait with methods: `save`, `find_by_id`, `find_by_ids`, `update_status`. The `update_status` method must also accept an optional `size_bytes` parameter so validation can write the actual file size when transitioning to "ready."
 - Create `packages/foundation/src/shared/image/repository.rs` with `PostgresImageRepository` implementing `ImageRepository`.
-  - Implement `save`: INSERT the image record into the `images` table. The `size_bytes` column is inserted as NULL.
+  - Implement `save`: INSERT the image record into the `image_records` table. The `size_bytes` column is inserted as NULL.
   - Implement `find_by_id`: SELECT an image record by ID.
   - Implement `find_by_ids`: SELECT image records by multiple IDs using `WHERE id = ANY($1)`.
   - Implement `update_status`: UPDATE status, updated_at, and optionally size_bytes for a given image ID. All UPDATE queries must include `updated_at = now()` since there is no database trigger.
@@ -118,7 +118,7 @@ The task is complete when the following criteria are met.
 
 - Domain types are defined with appropriate derives (Debug, Clone, etc.).
 - `ImageRepository` trait defines `save`, `find_by_id`, `find_by_ids`, and `update_status` methods.
-- The `Image` struct has `size_bytes` as `Option<i64>`.
+- The `ImageRecord` struct has `size_bytes` as `Option<i64>`.
 - The `save` method inserts NULL for `size_bytes`.
 - The `update_status` method can optionally update `size_bytes`.
 - `PostgresImageRepository` correctly inserts, retrieves, batch-retrieves, and updates image records.
@@ -137,7 +137,7 @@ Create the image upload feature slice structure under `packages/foundation/src/f
 - Create `packages/foundation/src/feature/image/upload/model.rs` with:
   - `ImageStorage` trait with methods: `generate_presigned_upload_url` (signs content type into the presigned URL so S3 rejects mismatched `Content-Type` headers), `get_object_metadata` (returns object size for validation), and `delete_object` (removes S3 objects on validation failure).
 - Create `packages/foundation/src/feature/image/upload/error.rs` with `UploadError` enum.
-- Import shared types (`Image`, `ImageId`, `ImageStatus`, `ImageRepository`) from `shared::image`.
+- Import shared types (`ImageRecord`, `ImageId`, `ImageStatus`, `ImageRepository`) from `shared::image`.
 - Export from `packages/foundation/src/feature/image/mod.rs`.
 
 The task is complete when the following criteria are met.
@@ -157,7 +157,7 @@ Create `packages/foundation/src/feature/image/upload/command.rs` with the comman
   2. Validate file_name doesn't exceed 255 characters, is non-empty, and contains no control characters (ASCII 0-31).
   3. Generate a ULID for the image ID.
   4. Construct the object key as `uploads/{image_id}` (no filename in the key).
-  5. Create an `Image` record with status "pending" and `size_bytes` as None, then save it to the repository.
+  5. Create an `ImageRecord` with status "pending" and `size_bytes` as None, then save it to the repository.
   6. Generate a presigned PUT URL via the storage trait, with content type signed into the URL.
   7. Return `PresignedUrl { image_id, upload_url, expires_at }`.
 - Write unit tests using hand-written mock implementations of `ImageRepository` and `ImageStorage`.

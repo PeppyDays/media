@@ -109,10 +109,10 @@ The endpoint returns the following error responses.
 
 #### 5.1.4. Database schema
 
-The `images` table stores metadata for uploaded images. Each media type (image, short-form video, long-form video) has its own table and feature slice. See section 5.4 for the architectural decision on media type separation.
+The `image_records` table stores metadata for uploaded images. Each media type (image, short-form video, long-form video) has its own table and feature slice. See section 5.4 for the architectural decision on media type separation.
 
 ```sql
-CREATE TABLE images (
+CREATE TABLE image_records (
     id          TEXT PRIMARY KEY,
     status      TEXT NOT NULL,
     content_type TEXT NOT NULL,
@@ -318,7 +318,7 @@ Each media type has fundamentally different characteristics that make a shared m
 
 #### Implementation
 
-The `images` table defined in this PRD stores only image records. When video support is added, short-form and long-form video will each get their own tables (`short_videos`, `long_videos`) and feature slices with their own domain types, commands, queries, and repositories.
+The `image_records` table defined in this PRD stores only image records. When video support is added, short-form and long-form video will each get their own tables (`short_videos`, `long_videos`) and feature slices with their own domain types, commands, queries, and repositories.
 
 Shared infrastructure (S3 client, CloudFront signer, SQS consumer, database pool) remains in `shared/` and is reused across feature slices. Only the domain models, commands, queries, and repositories are type-specific.
 
