@@ -4,9 +4,13 @@ Guidelines for managing branches, commits, and pull requests.
 
 ## Branching
 
-Always create a new branch from `main` before starting work. If the current branch has already been merged, switch back to `main` and create a fresh branch.
+Always create a new branch from `main` before starting work. Before doing anything, check whether the current branch's PR has already been merged. If it has, sync `main` and start a fresh branch — don't commit to the old branch.
 
 ```bash
+# Check PR status before starting
+gh pr view --json state,mergedAt
+
+# If merged, sync main and create a new branch
 git switch main
 git pull
 git switch -c <branch-name>

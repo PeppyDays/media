@@ -157,7 +157,7 @@ Rust doesn't need a DI framework. The type system enforces dependencies at compi
 
 ### Traits as interfaces
 
-Define infrastructure boundaries as traits in the domain layer. Implementations live in the infrastructure layer.
+Define infrastructure boundaries as traits in the domain layer. Implementations live in the infrastructure layer. This applies to all external dependencies — not just repositories, but also CDN signers, storage clients, queue consumers, and any other external service. Even when there's only one concrete implementation, define a trait so tests can provide a stub without hitting real infrastructure.
 
 ```rust
 // Domain layer: packages/foundation/src/feature/upload/model.rs
@@ -174,6 +174,28 @@ pub struct PostgresMediaRepository {
 
 impl MediaRepository for PostgresMediaRepository {
     // ...
+}
+```
+
+The same pattern applies to external service clients. For example, a CDN signer trait lets tests stub URL signing without real AWS credentials:
+
+```rust
+// shared/cdn.rs — trait defined alongside the concrete implementation
+pub trait CdnSigner: Send + Sync {
+    fn generate_signed_url(&self, object_key: &str, expiry_secs: u64) -> Result<String, CdnSigningError>;
+}
+
+pub struct CloudFrontSigner { /* ... */ }
+
+impl CdnSigner for CloudFrontSigner { /* ... */ }
+
+// In tests
+struct StubCdnSigner;
+
+impl CdnSigner for StubCdnSigner {
+    fn generate_signed_url(&self, object_key: &str, _: u64) -> Result<String, CdnSigningError> {
+        Ok(format!("https://cdn.example.com/{object_key}"))
+    }
 }
 ```
 
