@@ -16,7 +16,7 @@ git pull
 git switch -c <branch-name>
 ```
 
-Branch names must be lowercase and describe the change (for example, `add-image-upload`, `fix-presigned-url-expiry`).
+Branch names must be lowercase and describe the change (for example, `add-image-ingest`, `fix-presigned-url-expiry`).
 
 ## Commit guidelines
 
@@ -125,8 +125,8 @@ When a PR contains multiple commit types, use the type that best represents the 
 **Examples:**
 
 ```
-feat: add presigned URL generation for image uploads
-fix: handle expired tokens in upload validation
+feat: add presigned URL generation for image ingest
+fix: handle expired tokens in ingest validation
 docs: add testing guidelines and conventions
 chore: add CI pipeline and tooling config
 refactor: extract shared storage client into foundation
