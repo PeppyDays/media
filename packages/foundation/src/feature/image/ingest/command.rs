@@ -18,8 +18,8 @@ pub struct CreateImageIngestPresignedUrlCommand {
 }
 
 pub struct CreateImageIngestPresignedUrlCommandExecutor {
-    image_repository: Arc<dyn ImageRecordRepository>,
-    image_storage: Arc<dyn ImageStorage>,
+    repository: Arc<dyn ImageRecordRepository>,
+    storage: Arc<dyn ImageStorage>,
     bucket: String,
     expiry_secs: u64,
 }
@@ -32,8 +32,8 @@ impl CreateImageIngestPresignedUrlCommandExecutor {
         expiry_secs: u64,
     ) -> Self {
         Self {
-            image_repository,
-            image_storage,
+            repository: image_repository,
+            storage: image_storage,
             bucket,
             expiry_secs,
         }
@@ -63,10 +63,10 @@ impl CreateImageIngestPresignedUrlCommandExecutor {
             updated_at: now,
         };
 
-        self.image_repository.save(record).await?;
+        self.repository.save(record).await?;
 
         let presigned_upload = self
-            .image_storage
+            .storage
             .generate_presigned_ingest_url(
                 &self.bucket,
                 &object_key,
