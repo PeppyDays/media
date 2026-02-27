@@ -1,6 +1,6 @@
 # Architecture guidelines
 
-Technical architecture overview for the media service, a media processing service for uploading, transcoding, and serving images and videos.
+Technical architecture overview for the media service, a media processing service for ingesting, transcoding, and serving images and videos.
 
 ## Workspace structure
 
@@ -57,8 +57,8 @@ packages/foundation/src/
 ├── shared/              # Shared infrastructure (storage, cdn, queue, database)
 └── feature/             # Production feature slices
     ├── image/           # Image media type
-    │   ├── upload/      # Presigned URL generation and upload validation
-    │   └── download/    # Image access via signed URLs
+    │   ├── ingest/      # Presigned URL generation and ingest validation
+    │   └── serve/       # Image access via signed URLs
     ├── short_video/     # Short-form video (future)
     └── long_video/      # Long-form video (future)
 ```
@@ -92,8 +92,8 @@ packages/api/src/
     ├── mod.rs
     ├── image/
     │   ├── mod.rs
-    │   ├── upload.rs   # Image upload endpoints
-    │   └── download.rs # Image download endpoints
+    │   ├── ingest.rs   # Image ingest endpoints
+    │   └── serve.rs    # Image serve endpoints
     └── health.rs       # Health check endpoints
 ```
 
@@ -134,7 +134,7 @@ Each infrastructure boundary defines its own contract model — a struct shaped 
 | Boundary            | Contract model         | Example                  |
 | ------------------- | ---------------------- | ------------------------ |
 | Database repository | Data model             | `ImageDataModel`         |
-| HTTP handler        | Request / Response DTO | `CreateUploadUrlRequest` |
+| HTTP handler        | Request / Response DTO | `CreateIngestUrlRequest` |
 | External API client | API response model     | `CloudFrontSignResponse` |
 
 Use standard conversion traits for the mapping:
@@ -160,14 +160,14 @@ Rust doesn't need a DI framework. The type system enforces dependencies at compi
 Define infrastructure boundaries as traits in the domain layer. Implementations live in the infrastructure layer. This applies to all external dependencies — not just repositories, but also CDN signers, storage clients, queue consumers, and any other external service. Even when there's only one concrete implementation, define a trait so tests can provide a stub without hitting real infrastructure.
 
 ```rust
-// Domain layer: packages/foundation/src/feature/upload/model.rs
+// Domain layer: packages/foundation/src/feature/ingest/model.rs
 #[async_trait]
 pub trait MediaRepository: Send + Sync {
     async fn find(&self, id: MediaId) -> Result<Option<Media>, RepositoryError>;
     async fn save(&self, media: &Media) -> Result<(), RepositoryError>;
 }
 
-// Infrastructure layer: packages/foundation/src/feature/upload/repository.rs
+// Infrastructure layer: packages/foundation/src/feature/ingest/repository.rs
 pub struct PostgresMediaRepository {
     pool: PgPool,
 }
@@ -204,13 +204,13 @@ impl CdnSigner for StubCdnSigner {
 Executors receive their dependencies as trait objects through their constructor. Use `Arc<dyn Trait>` for shared ownership across async tasks.
 
 ```rust
-// packages/foundation/src/feature/upload/command.rs
-pub struct CreateUploadUrlCommandExecutor {
+// packages/foundation/src/feature/ingest/command.rs
+pub struct CreateIngestUrlCommandExecutor {
     media_repository: Arc<dyn MediaRepository>,
     storage: Arc<dyn MediaStorage>,
 }
 
-impl CreateUploadUrlCommandExecutor {
+impl CreateIngestUrlCommandExecutor {
     pub fn new(
         media_repository: Arc<dyn MediaRepository>,
         storage: Arc<dyn MediaStorage>,
@@ -218,7 +218,7 @@ impl CreateUploadUrlCommandExecutor {
         Self { media_repository, storage }
     }
 
-    pub async fn execute(&self, command: CreateUploadUrlCommand) -> Result<UploadUrl, UploadError> {
+    pub async fn execute(&self, command: CreateIngestUrlCommand) -> Result<IngestUrl, IngestError> {
         // ...
     }
 }
@@ -232,7 +232,7 @@ Each binary crate (`api`, `processor`) has a `container.rs` that composes the de
 // packages/api/src/container.rs
 #[derive(Clone)]
 pub struct AppState {
-    pub create_upload_url: Arc<CreateUploadUrlCommandExecutor>,
+    pub create_ingest_url: Arc<CreateIngestUrlCommandExecutor>,
     pub get_media: Arc<GetMediaQueryExecutor>,
     // ...
 }
@@ -246,12 +246,12 @@ impl AppState {
         let storage = Arc::new(S3Storage::new(config));
 
         // Wire executors
-        let create_upload_url = Arc::new(CreateUploadUrlCommandExecutor::new(
+        let create_ingest_url = Arc::new(CreateIngestUrlCommandExecutor::new(
             media_repository.clone(),
             storage.clone(),
         ));
 
-        Self { create_upload_url, /* ... */ }
+        Self { create_ingest_url, /* ... */ }
     }
 }
 ```
@@ -267,7 +267,7 @@ async fn main() {
     let state = container::AppState::build(&config).await;
 
     let app = Router::new()
-        .route("/api/v1/upload-url", post(routes::upload::create))
+        .route("/api/v1/ingest-url", post(routes::ingest::create))
         .with_state(state);
 
     // ...
@@ -277,16 +277,16 @@ async fn main() {
 Handlers extract state via axum's `State` extractor:
 
 ```rust
-// packages/api/src/routes/upload.rs
+// packages/api/src/routes/ingest.rs
 pub async fn create(
     State(state): State<AppState>,
-    Json(payload): Json<CreateUploadUrlRequest>,
-) -> Result<Json<CreateUploadUrlResponse>, ApiError> {
-    let command = CreateUploadUrlCommand {
+    Json(payload): Json<CreateIngestUrlRequest>,
+) -> Result<Json<CreateIngestUrlResponse>, ApiError> {
+    let command = CreateIngestUrlCommand {
         content_type: payload.content_type,
         size_bytes: payload.size_bytes,
     };
-    let result = state.create_upload_url.execute(command).await?;
+    let result = state.create_ingest_url.execute(command).await?;
     Ok(Json(result.into()))
 }
 ```

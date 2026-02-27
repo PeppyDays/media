@@ -1,6 +1,6 @@
 # Image management tasks
 
-This document breaks the image management feature into implementation tasks organized across five phases: foundation setup, upload, serve, post-upload validation, and health check middleware.
+This document breaks the image management feature into implementation tasks organized across five phases: foundation setup, ingest, serve, post-ingest validation, and health check middleware.
 
 ## Phase 1: Foundation setup and shared infrastructure
 
@@ -27,8 +27,8 @@ Create `packages/foundation/src/common/config.rs` to load configuration from env
 
 - Create the `Config` struct with all fields listed in the PRD configuration section.
 - Implement a `Config::load()` method that reads from environment variables.
-- Use default values for expiry durations (300s for upload URLs, 600s for signed URLs) and max upload size (10MB).
-- The max upload size config is used by the post-upload validation processor, not by the API upload endpoint.
+- Use default values for expiry durations (300s for ingest URLs, 600s for signed URLs) and max ingest size (10MB).
+- The max ingest size config is used by the post-ingest validation processor, not by the API ingest endpoint.
 - Export from `packages/foundation/src/common/mod.rs`.
 
 The task is complete when the following criteria are met.
@@ -68,7 +68,7 @@ The task is complete when the following criteria are met.
 Create `migrations/0001_images.sql` with the image_records table schema as defined in the PRD.
 
 - Create the `image_records` table with columns: id (TEXT PK), status, content_type, file_name, size_bytes (BIGINT, nullable), object_key, created_at, updated_at.
-- The `size_bytes` column is nullable (BIGINT without NOT NULL) because the actual file size is unknown at upload time and is populated during post-upload validation.
+- The `size_bytes` column is nullable (BIGINT without NOT NULL) because the actual file size is unknown at ingest time and is populated during post-ingest validation.
 - There is no `type` column. The table itself represents the image type. Short-form and long-form video will get their own tables (`short_videos`, `long_videos`) when implemented.
 - Document that this migration is applied manually for local development.
 - Note: There is no database trigger for `updated_at`. The application code is responsible for setting `updated_at` in all UPDATE queries.
@@ -98,12 +98,12 @@ The task is complete when the following criteria are met.
 
 ### Task 1.7: Define image domain types and repository
 
-Create `packages/foundation/src/shared/image/` with image domain types and the repository trait used by multiple features (upload, serve, validation).
+Create `packages/foundation/src/shared/image/` with image domain types and the repository trait used by multiple features (ingest, serve, validation).
 
 - Create `packages/foundation/src/shared/image/mod.rs` with module declarations.
 - Create `packages/foundation/src/shared/image/model.rs` with:
   - `ImageId` newtype wrapping a String (ULID).
-  - `ImageRecord` struct with all fields from the database schema. The `size_bytes` field is `Option<i64>` because it is nullable (unknown at upload time, populated during validation).
+  - `ImageRecord` struct with all fields from the database schema. The `size_bytes` field is `Option<i64>` because it is nullable (unknown at ingest time, populated during validation).
   - `ImageStatus` enum with variants: Pending, Ready, Failed.
   - `ImageRepository` trait with methods: `save`, `find_by_id`, `find_by_ids`, `update_status`. The `update_status` method must also accept an optional `size_bytes` parameter so validation can write the actual file size when transitioning to "ready."
 - Create `packages/foundation/src/shared/image/repository.rs` with `PostgresImageRepository` implementing `ImageRepository`.
@@ -123,20 +123,20 @@ The task is complete when the following criteria are met.
 - The `update_status` method can optionally update `size_bytes`.
 - `PostgresImageRepository` correctly inserts, retrieves, batch-retrieves, and updates image records.
 - Status enum maps correctly to and from database text values.
-- All features (upload, serve, validation) can import these types from `shared::record::image_record`.
+- All features (ingest, serve, validation) can import these types from `shared::record::image_record`.
 
-## Phase 2: Upload feature
+## Phase 2: Ingest feature
 
 This phase implements the presigned URL generation endpoint, from the domain layer through the API handler.
 
-### Task 2.1: Define upload domain models and traits
+### Task 2.1: Define ingest domain models and traits
 
-Create the image upload feature slice structure under `packages/foundation/src/feature/image/upload/`.
+Create the image ingest feature slice structure under `packages/foundation/src/feature/image/ingest/`.
 
-- Create `packages/foundation/src/feature/image/upload/mod.rs` with module declarations.
-- Create `packages/foundation/src/feature/image/upload/model.rs` with:
-  - `ImageStorage` trait with methods: `generate_presigned_upload_url` (signs content type into the presigned URL so S3 rejects mismatched `Content-Type` headers), `get_object_metadata` (returns object size for validation), and `delete_object` (removes S3 objects on validation failure).
-- Create `packages/foundation/src/feature/image/upload/error.rs` with `UploadError` enum.
+- Create `packages/foundation/src/feature/image/ingest/mod.rs` with module declarations.
+- Create `packages/foundation/src/feature/image/ingest/model.rs` with:
+  - `ImageStorage` trait with methods: `generate_presigned_ingest_url` (signs content type into the presigned URL so S3 rejects mismatched `Content-Type` headers), `get_object_metadata` (returns object size for validation), and `delete_object` (removes S3 objects on validation failure).
+- Create `packages/foundation/src/feature/image/ingest/error.rs` with `IngestError` enum.
 - Import shared types (`ImageRecord`, `ImageId`, `ImageStatus`, `ImageRepository`) from `shared::record::image_record`.
 - Export from `packages/foundation/src/feature/image/mod.rs`.
 
@@ -146,17 +146,17 @@ The task is complete when the following criteria are met.
 - Shared types are imported from `shared::record::image_record`, not redefined.
 - Error types use `thiserror` for ergonomic error handling.
 
-### Task 2.2: Implement the `CreateImageUploadUrl` command and executor
+### Task 2.2: Implement the `CreateImageIngestUrl` command and executor
 
-Create `packages/foundation/src/feature/image/upload/command.rs` with the command DTO and executor.
+Create `packages/foundation/src/feature/image/ingest/command.rs` with the command DTO and executor.
 
-- Define `CreateImageUploadPresignedUrlCommand` with fields: content_type (String), file_name (String). No `size_bytes` field.
-- Define `CreateImageUploadPresignedUrlCommandExecutor` with dependencies: `Arc<dyn ImageRepository>`, `Arc<dyn ImageStorage>`, and config values (bucket name, expiry).
+- Define `CreateImageIngestPresignedUrlCommand` with fields: content_type (String), file_name (String). No `size_bytes` field.
+- Define `CreateImageIngestPresignedUrlCommandExecutor` with dependencies: `Arc<dyn ImageRepository>`, `Arc<dyn ImageStorage>`, and config values (bucket name, expiry).
 - Implement `execute` method:
   1. Validate content_type is an exact match against the allowlist: `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/gif`. Reject pattern matches (for example, `image/*`), parameterized types (for example, `image/jpeg;text/html`), and any value not in the list.
   2. Validate file_name doesn't exceed 255 characters, is non-empty, and contains no control characters (ASCII 0-31).
   3. Generate a ULID for the image ID.
-  4. Construct the object key as `uploads/{image_id}` (no filename in the key).
+  4. Construct the object key as `ingest/{image_id}` (no filename in the key).
   5. Create an `ImageRecord` with status "pending" and `size_bytes` as None, then save it to the repository.
   6. Generate a presigned PUT URL via the storage trait, with content type signed into the URL.
   7. Return `PresignedUrl { image_id, upload_url, expires_at }`.
@@ -166,8 +166,8 @@ The task is complete when the following criteria are met.
 
 - Command validates content type as an exact match against the allowlist.
 - Parameterized MIME types (for example, `image/jpeg;text/html`) are rejected.
-- No size validation is performed (size is enforced only during post-upload validation).
-- Object key format is `uploads/{image_id}` with no user-supplied filename.
+- No size validation is performed (size is enforced only during post-ingest validation).
+- Object key format is `ingest/{image_id}` with no user-supplied filename.
 - Image record is persisted with `size_bytes` as NULL before returning the presigned URL.
 - Presigned URL is generated with the content type signed into the URL.
 - Tests cover: successful presigned URL creation, invalid content type rejection, parameterized MIME type rejection.
@@ -176,10 +176,10 @@ The task is complete when the following criteria are met.
 
 Create the `ImageStorage` trait implementation using the AWS S3 SDK.
 
-- Implement `generate_presigned_upload_url` using the S3 presigned request builder.
+- Implement `generate_presigned_ingest_url` using the S3 presigned request builder.
 - Configure the presigned URL with: PUT method, content type (signed into the URL), and expiry duration.
-- **Verify that the generated presigned URL includes `content-type` in `X-Amz-SignedHeaders`.** Some AWS SDKs silently exclude `Content-Type` from signed headers, which means S3 would accept any Content-Type on upload. If the Rust SDK does not include it, document the limitation and rely on post-upload validation as the authoritative enforcement point.
-- Note: S3 presigned PUT URLs cannot enforce `content-length-range`. File size enforcement happens during post-upload validation.
+- **Verify that the generated presigned URL includes `content-type` in `X-Amz-SignedHeaders`.** Some AWS SDKs silently exclude `Content-Type` from signed headers, which means S3 would accept any Content-Type on ingest. If the Rust SDK does not include it, document the limitation and rely on post-ingest validation as the authoritative enforcement point.
+- Note: S3 presigned PUT URLs cannot enforce `content-length-range`. File size enforcement happens during post-ingest validation.
 - Return the URL string and expiry timestamp.
 
 The task is complete when the following criteria are met.
@@ -187,16 +187,16 @@ The task is complete when the following criteria are met.
 - Presigned URL is generated with PUT method, correct content type, and expiry.
 - The generated URL's `X-Amz-SignedHeaders` includes `content-type`. If the SDK does not support this, document the limitation.
 
-### Task 2.4: Wire the upload endpoint in the API package
+### Task 2.4: Wire the ingest endpoint in the API package
 
-Set up the axum server in `packages/api/` and wire the upload endpoint.
+Set up the axum server in `packages/api/` and wire the ingest endpoint.
 
-- Create `packages/api/src/container.rs` with `AppState` that holds the `CreateImageUploadPresignedUrlCommandExecutor`.
+- Create `packages/api/src/container.rs` with `AppState` that holds the `CreateImageIngestPresignedUrlCommandExecutor`.
 - Implement `AppState::build(config: &Config)` that wires all dependencies.
-- Create `packages/api/src/routes/image/mod.rs` and `packages/api/src/routes/image/upload.rs`.
-- Implement the `POST /api/image/v1/upload/create-presigned-url` handler:
+- Create `packages/api/src/routes/image/mod.rs` and `packages/api/src/routes/image/ingest.rs`.
+- Implement the `POST /api/image/v1/ingest/create-presigned-url` handler:
   1. Parse JSON request body with `content_type` and `file_name` fields only. No `size_bytes`.
-  2. Construct `CreateImageUploadPresignedUrlCommand`.
+  2. Construct `CreateImageIngestPresignedUrlCommand`.
   3. Call the executor.
   4. Return 201 Created with the response body.
   5. Map domain errors to appropriate HTTP status codes (400 for invalid content type).
@@ -205,7 +205,7 @@ Set up the axum server in `packages/api/` and wire the upload endpoint.
 The task is complete when the following criteria are met.
 
 - API server starts and listens on a configured port.
-- POST /api/image/v1/upload/create-presigned-url accepts a valid request and returns 201 with image_id, upload_url, and expires_at.
+- POST /api/image/v1/ingest/create-presigned-url accepts a valid request and returns 201 with image_id, upload_url, and expires_at.
 - Invalid content types return 400.
 - No 413 response exists (no size validation at the API level).
 - Handler is thin and delegates to the command executor.
@@ -216,13 +216,13 @@ This phase implements the image serving endpoints that generate CloudFront signe
 
 ### Task 3.1: Define serve domain models and traits
 
-Create the serve feature slice under `packages/foundation/src/feature/image/download/`.
+Create the serve feature slice under `packages/foundation/src/feature/image/serve/`.
 
-- Create `packages/foundation/src/feature/image/download/mod.rs` with module declarations.
-- Create `packages/foundation/src/feature/image/download/model.rs` with:
+- Create `packages/foundation/src/feature/image/serve/mod.rs` with module declarations.
+- Create `packages/foundation/src/feature/image/serve/model.rs` with:
   - `ImageAccess` struct with fields: image_id, download_url, expires_at.
   - `ImageCdn` trait with a `generate_signed_url` method that takes an object key and returns a signed URL.
-- Create `packages/foundation/src/feature/image/download/error.rs` with `ServeError` enum (NotFound, CdnSigningFailed, etc.).
+- Create `packages/foundation/src/feature/image/serve/error.rs` with `ServeError` enum (NotFound, CdnSigningFailed, etc.).
 - Import `ImageRepository` and shared types from `shared::record::image_record`.
 - Export from `packages/foundation/src/feature/image/mod.rs`.
 
@@ -234,17 +234,17 @@ The task is complete when the following criteria are met.
 
 ### Task 3.2: Implement `GetImage` query and executor
 
-Create `packages/foundation/src/feature/image/download/query.rs` with the query DTOs and executors.
+Create `packages/foundation/src/feature/image/serve/query.rs` with the query DTOs and executors.
 
-- Define `GetImageDownloadSignedUrlQuery` with field: image_id (String).
-- Define `GetImageDownloadSignedUrlQueryExecutor` with dependencies: `Arc<dyn ImageRepository>`, `Arc<dyn ImageCdn>`, and config values (signed URL expiry).
+- Define `GetImageServeSignedUrlQuery` with field: image_id (String).
+- Define `GetImageServeSignedUrlQueryExecutor` with dependencies: `Arc<dyn ImageRepository>`, `Arc<dyn ImageCdn>`, and config values (signed URL expiry).
 - Implement `execute` method:
   1. Look up the image record by ID.
   2. Return not-found error if the record doesn't exist or status isn't "ready."
   3. Generate a CloudFront signed URL using the CDN trait.
   4. Return `ImageAccess`.
-- Define `GetImageDownloadSignedUrlsQuery` with field: image_ids (Vec of String).
-- Define `GetImageDownloadSignedUrlsQueryExecutor` with the same dependencies.
+- Define `GetImageServeSignedUrlsQuery` with field: image_ids (Vec of String).
+- Define `GetImageServeSignedUrlsQueryExecutor` with the same dependencies.
 - Implement batch `execute` method:
   1. Validate the list isn't empty and doesn't exceed 50 items.
   2. Deduplicate input IDs before querying. Look up all image records by unique IDs (single query via `find_by_ids`).
@@ -279,23 +279,23 @@ The task is complete when the following criteria are met.
 
 Add the serve routes to the axum router and wire dependencies.
 
-- Create `packages/api/src/routes/image/download.rs` with two handlers:
-  1. `GET /api/image/v1/download/get-signed-url/{image_id}` handler for single retrieval.
-  2. `POST /api/image/v1/download/get-signed-urls` handler for batch retrieval.
-- Add `GetImageDownloadSignedUrlQueryExecutor` and `GetImageDownloadSignedUrlsQueryExecutor` to `AppState`.
+- Create `packages/api/src/routes/image/serve.rs` with two handlers:
+  1. `GET /api/image/v1/serve/get-signed-url/{image_id}` handler for single retrieval.
+  2. `POST /api/image/v1/serve/get-signed-urls` handler for batch retrieval.
+- Add `GetImageServeSignedUrlQueryExecutor` and `GetImageServeSignedUrlsQueryExecutor` to `AppState`.
 - Wire `CloudFrontImageCdn` in `container.rs`.
 - Map domain errors to HTTP status codes (404 for not found, 400 for bad request).
 
 The task is complete when the following criteria are met.
 
-- GET /api/image/v1/download/get-signed-url/{image_id} returns 200 with a signed URL for ready images.
-- GET /api/image/v1/download/get-signed-url/{image_id} returns 404 for missing or non-ready images.
-- POST /api/image/v1/download/get-signed-urls returns 200 with items and not_found arrays.
-- POST /api/image/v1/download/get-signed-urls returns 400 for empty or oversized requests.
+- GET /api/image/v1/serve/get-signed-url/{image_id} returns 200 with a signed URL for ready images.
+- GET /api/image/v1/serve/get-signed-url/{image_id} returns 404 for missing or non-ready images.
+- POST /api/image/v1/serve/get-signed-urls returns 200 with items and not_found arrays.
+- POST /api/image/v1/serve/get-signed-urls returns 400 for empty or oversized requests.
 
-## Phase 4: Post-upload validation via SQS
+## Phase 4: Post-ingest validation via SQS
 
-This phase implements the processor worker that consumes S3 event notifications from SQS, validates uploaded images, and updates image status.
+This phase implements the processor worker that consumes S3 event notifications from SQS, validates ingested images, and updates image status.
 
 ### Task 4.1: Implement SQS client in foundation shared
 
@@ -318,7 +318,7 @@ Create a module to parse S3 event notification messages from SQS, with strict ob
 
 - Define structs for the S3 event notification JSON format (Records, S3 object, bucket).
 - Implement parsing to extract the object key from each record.
-- Validate the object key format using a regex pattern (`^uploads/[0-7][0-9A-HJKMNP-TV-Z]{25}$` for ULID characters) before extracting the image ID. Reject keys that don't match the expected format.
+- Validate the object key format using a regex pattern (`^ingest/[0-7][0-9A-HJKMNP-TV-Z]{25}$` for ULID characters) before extracting the image ID. Reject keys that don't match the expected format.
 - Handle the SQS message wrapper (the S3 event JSON is nested inside the SQS message body).
 
 The task is complete when the following criteria are met.
@@ -330,16 +330,16 @@ The task is complete when the following criteria are met.
 
 ### Task 4.3: Define validation command and executor
 
-Create a validation command under the image upload feature (validation is part of the upload lifecycle).
+Create a validation command under the image ingest feature (validation is part of the ingest lifecycle).
 
-- Define `ValidateImageCommand` with fields: image_id (ImageId), object_key (String).
-- Define `ValidateImageCommandExecutor` with dependencies: `Arc<dyn ImageRepository>`, `Arc<dyn ImageStorage>`, and config values (max upload size).
+- Define `ValidateIngestImageCommand` with fields: image_id (ImageId), object_key (String).
+- Define `ValidateIngestImageCommandExecutor` with dependencies: `Arc<dyn ImageRepository>`, `Arc<dyn ImageStorage>`, and config values (max ingest size).
 - Implement `execute` method:
   1. Look up the image record by ID.
   2. Return an error if the image record isn't found.
   3. Check that the status is "pending". If not, skip processing (idempotency guard for SQS at-least-once delivery) and return success.
   4. Get the object metadata from S3 (via the storage trait) to read the actual file size.
-  5. If the file size exceeds the configured max upload size (10 MB), update status to "failed" and return.
+  5. If the file size exceeds the configured max ingest size (10 MB), update status to "failed" and return.
   6. Run validation (stub: always succeeds). Mark this stub clearly with a comment: "MUST replace with magic-bytes MIME type detection before production use." The stub must log a warning on every invocation to ensure it isn't silently left in production.
   7. On success: update image status to "ready" and write the actual `size_bytes` value via `update_status`.
   8. On failure (oversized or invalid): update image status to "failed" and delete the S3 object via the storage trait to prevent storage accumulation.

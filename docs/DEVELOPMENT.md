@@ -215,7 +215,7 @@ impl From<MediaId> for String {
 ```rust
 // Good: typed errors with context
 #[derive(Debug, thiserror::Error)]
-enum UploadError {
+enum IngestError {
     #[error("media not found: {0}")]
     NotFound(MediaId),
 
@@ -227,7 +227,7 @@ enum UploadError {
 }
 
 // Bad: string errors
-fn upload(file: File) -> Result<(), String> { ... }
+fn ingest(file: File) -> Result<(), String> { ... }
 ```
 
 ### Domain enums stored as text
@@ -321,12 +321,12 @@ These conventions keep the codebase navigable as it grows.
 
 ```rust
 // Good: mod.rs only declares submodules
-// src/feature/upload/mod.rs
+// src/feature/ingest/mod.rs
 pub mod command;
 pub mod handler;
 
 // Import from the source module
-use crate::feature::upload::command::CreateUploadUrlCommand;
+use crate::feature::ingest::command::CreateIngestUrlCommand;
 ```
 
 ### Naming conventions
@@ -339,8 +339,8 @@ Use verb-first naming for commands and queries, with matching executor types.
 
 ##### Command components
 
-- **Command DTO**: Start with a verb, end with `Command`, for example, `CreateUploadUrlCommand`, `CompleteUploadCommand`
-- **Command executor**: Same name with `Executor` suffix, for example, `CreateUploadUrlCommandExecutor`
+- **Command DTO**: Start with a verb, end with `Command`, for example, `CreateIngestUrlCommand`, `CompleteIngestCommand`
+- **Command executor**: Same name with `Executor` suffix, for example, `CreateIngestUrlCommandExecutor`
 
 ##### Query components
 
@@ -351,8 +351,8 @@ Use verb-first naming for commands and queries, with matching executor types.
 
 Use noun-first, past-tense naming for events with matching handler types.
 
-- **Event DTO**: Start with a noun, use past-tense verb, end with `Event`, for example, `MediaUploadedEvent`, `TranscodeCompletedEvent`
-- **Event handler**: Same name with `Handler` suffix, for example, `MediaUploadedEventHandler`
+- **Event DTO**: Start with a noun, use past-tense verb, end with `Event`, for example, `MediaIngestedEvent`, `TranscodeCompletedEvent`
+- **Event handler**: Same name with `Handler` suffix, for example, `MediaIngestedEventHandler`
 
 ### API path conventions
 
@@ -364,15 +364,15 @@ Each media type owns its own API surface under a dedicated path prefix. The path
 
 - `{media-type}`: Singular form of the media type (for example, `image`, `short-video`, `long-video`).
 - `v1`: API version, scoped per media type. Each media type can version independently.
-- `{resource}`: The domain resource or capability (for example, `upload`, `download`, `images`).
+- `{resource}`: The domain resource or capability (for example, `ingest`, `serve`, `images`).
 - `{action}`: The specific operation (for example, `create-presigned-url`, `get-signed-url`).
 
 For example:
 
 ```
-POST /api/image/v1/upload/create-presigned-url
-GET  /api/image/v1/download/get-signed-url/{image_id}
-POST /api/image/v1/download/get-signed-urls
+POST /api/image/v1/ingest/create-presigned-url
+GET  /api/image/v1/serve/get-signed-url/{image_id}
+POST /api/image/v1/serve/get-signed-urls
 ```
 
 Infrastructure endpoints like health checks live at the root level without versioning:

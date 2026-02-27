@@ -20,19 +20,19 @@ A video of 10 minutes or longer. Transcoded to CMAF segments with HLS manifests 
 
 ## Media lifecycle
 
-Each piece of media moves through the following stages from upload to serving.
+Each piece of media moves through the following stages from ingest to serving.
 
-### Upload
+### Ingest
 
-The process of a client obtaining a presigned URL from the service and uploading a file directly to object storage. The presigned URL binds content-type and enforces size limits.
+The process of receiving a file from a client via a presigned URL into object storage. The presigned URL binds content-type and enforces size limits.
 
 ### Validation
 
-Post-upload verification triggered by a storage event notification. Checks actual MIME type against declared content-type and scans for malicious content.
+Post-ingest verification triggered by a storage event notification. Checks actual MIME type against declared content-type and scans for malicious content.
 
 ### Transcoding
 
-Asynchronous conversion of uploaded video into one or more output formats. Performed by a worker consuming jobs from a message queue. Produces quality variants and thumbnails.
+Asynchronous conversion of ingested video into one or more output formats. Performed by a worker consuming jobs from a message queue. Produces quality variants and thumbnails.
 
 ### Serving
 

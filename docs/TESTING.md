@@ -21,15 +21,15 @@ packages/
 ├── api/
 │   ├── src/
 │   │   └── routes/
-│   │       └── upload.rs           # includes #[cfg(test)] mod tests
+│   │       └── ingest.rs           # includes #[cfg(test)] mod tests
 │   └── tests/                      # API integration tests
 │       ├── common/
 │       │   └── mod.rs              # Shared test utilities, fixtures
-│       └── upload_test.rs
+│       └── ingest_test.rs
 ├── foundation/
 │   ├── src/
 │   │   └── feature/
-│   │       ├── upload/
+│   │       ├── ingest/
 │   │       │   └── command.rs      # includes #[cfg(test)] mod tests
 │   │       └── serve/
 │   │           └── query.rs        # includes #[cfg(test)] mod tests
@@ -98,7 +98,7 @@ Name test functions using the `sut_{behavior}_when_{condition}` pattern (SUT = S
 // Good: describes behavior and condition
 sut_returns_signed_url_when_media_is_image
 sut_returns_not_found_error_when_media_does_not_exist
-sut_creates_upload_url_with_correct_content_type
+sut_creates_ingest_url_with_correct_content_type
 sut_returns_cursor_as_none_when_items_less_than_limit
 ```
 
@@ -127,8 +127,8 @@ fn arrange_media() -> Media {
     }
 }
 
-fn arrange_upload_payload() -> UploadPayload {
-    UploadPayload {
+fn arrange_ingest_payload() -> IngestPayload {
+    IngestPayload {
         content_type: "image/png".to_string(),
         size_bytes: rand::random_range(1024..50_000_000),
     }
@@ -194,8 +194,8 @@ fn sut_returns_signed_cookie_when_media_is_long_video() {
 ```rust
 // Good: comment explains why this specific value matters
 #[test]
-fn sut_rejects_upload_when_file_exceeds_max_size() {
-    // 100MB is the domain-defined upload limit
+fn sut_rejects_ingest_when_file_exceeds_max_size() {
+    // 100MB is the domain-defined ingest limit
     let max_size: u64 = 100 * 1024 * 1024;
     let mut media = arrange_media();
     media.size_bytes = max_size + 1;
@@ -262,7 +262,7 @@ async fn sut_delivers_command_to_executor_correctly() {
     let payload = arrange_payload();
 
     // Act
-    let _ = app.post("/api/v1/upload-url").json(&payload).send().await;
+    let _ = app.post("/api/v1/ingest-url").json(&payload).send().await;
 
     // Assert
     let captured = spy.captured_command();
