@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use sqlx::Pool;
 use sqlx::Postgres;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImageRecord {
     pub id: ImageId,
     pub status: ImageStatus,
@@ -19,7 +19,7 @@ pub struct ImageRecord {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImageId(String);
 
 impl ImageId {
@@ -46,7 +46,7 @@ impl AsRef<str> for ImageId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ImageStatus {
     Pending,
     Ready,
@@ -56,9 +56,9 @@ pub enum ImageStatus {
 impl AsRef<str> for ImageStatus {
     fn as_ref(&self) -> &str {
         match self {
-            Self::Pending => "Pending",
-            Self::Ready => "Ready",
-            Self::Failed => "Failed",
+            Self::Pending => "pending",
+            Self::Ready => "ready",
+            Self::Failed => "failed",
         }
     }
 }
@@ -68,20 +68,21 @@ impl TryFrom<&str> for ImageStatus {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "Pending" => Ok(Self::Pending),
-            "Ready" => Ok(Self::Ready),
-            "Failed" => Ok(Self::Failed),
+            "pending" => Ok(Self::Pending),
+            "ready" => Ok(Self::Ready),
+            "failed" => Ok(Self::Failed),
             _ => Err(format!("unknown image status: {s}")),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ImageContentType {
     Jpeg,
     Png,
     WebP,
     Avif,
+    Gif,
 }
 
 impl AsRef<str> for ImageContentType {
@@ -91,6 +92,7 @@ impl AsRef<str> for ImageContentType {
             Self::Png => "image/png",
             Self::WebP => "image/webp",
             Self::Avif => "image/avif",
+            Self::Gif => "image/gif",
         }
     }
 }
@@ -104,6 +106,7 @@ impl TryFrom<&str> for ImageContentType {
             "image/png" => Ok(Self::Png),
             "image/webp" => Ok(Self::WebP),
             "image/avif" => Ok(Self::Avif),
+            "image/gif" => Ok(Self::Gif),
             _ => Err(format!("unknown image content type: {s}")),
         }
     }
@@ -111,6 +114,9 @@ impl TryFrom<&str> for ImageContentType {
 
 #[derive(Debug, thiserror::Error)]
 pub enum RepositoryError {
+    #[error("record not found")]
+    NotFound,
+
     #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -126,7 +132,7 @@ pub trait ImageRecordRepository: Send + Sync {
     async fn update(
         &self,
         id: &ImageId,
-        modifier: impl FnOnce(ImageRecord) -> ImageRecord + Send,
+        modifier: Box<dyn FnOnce(ImageRecord) -> ImageRecord + Send>,
     ) -> Result<(), RepositoryError>;
 }
 
@@ -243,12 +249,30 @@ impl ImageRecordRepository for PostgresImageRecordRepository {
     async fn update(
         &self,
         id: &ImageId,
-        modifier: impl FnOnce(ImageRecord) -> ImageRecord + Send,
+        modifier: Box<dyn FnOnce(ImageRecord) -> ImageRecord + Send>,
     ) -> Result<(), RepositoryError> {
         let Some(image) = self.find_by_id(id).await? else {
-            return Ok(());
+            return Err(RepositoryError::NotFound);
         };
 
-        self.save(modifier(image)).await
+        let updated = modifier(image);
+        let data_model = ImageRecordDataModel::from(updated);
+
+        sqlx::query(
+            "UPDATE image_records
+             SET status = $1, content_type = $2, file_name = $3, size_bytes = $4,
+                 object_key = $5, updated_at = now()
+             WHERE id = $6",
+        )
+        .bind(&data_model.status)
+        .bind(&data_model.content_type)
+        .bind(&data_model.file_name)
+        .bind(data_model.size_bytes)
+        .bind(&data_model.object_key)
+        .bind(&data_model.id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }

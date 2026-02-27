@@ -4,7 +4,7 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LogLevel {
     Trace,
     Debug,
@@ -42,7 +42,7 @@ impl AsRef<str> for LogLevel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum LogFormat {
     Pretty,
     Json,

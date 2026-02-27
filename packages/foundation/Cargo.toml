@@ -27,3 +27,4 @@ ulid = { version = "1", features = ["serde"] }
 
 [dev-dependencies]
 rstest.workspace = true
+tokio.workspace = true
