@@ -6,6 +6,9 @@ use crate::common::tracing::LogLevel;
 #[derive(Debug, Envconfig)]
 pub struct Config {
     #[envconfig(nested)]
+    pub server: ServerConfig,
+
+    #[envconfig(nested)]
     pub database: DatabaseConfig,
 
     #[envconfig(nested)]
@@ -25,6 +28,12 @@ impl Config {
     pub fn load() -> Self {
         Self::init_from_env().expect("failed to load configuration from environment")
     }
+}
+
+#[derive(Debug, Envconfig)]
+pub struct ServerConfig {
+    #[envconfig(from = "FOUNDATION_SERVER_PORT", default = "8080")]
+    pub port: u16,
 }
 
 #[derive(Debug, Envconfig)]
